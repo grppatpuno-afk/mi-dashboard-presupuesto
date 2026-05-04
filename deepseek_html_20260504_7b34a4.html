@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Dashboard Ejecución Presupuestal | Datos desde GitHub</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+
+        body {
+            background: #f1f5f9;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* header */
+        .header {
+            background: white;
+            border-radius: 28px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.6rem;
+            color: #0f172a;
+        }
+
+        .status-badge {
+            background: #e6f0fa;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+        }
+
+        /* selector de indicadores extra */
+        .extra-selector {
+            background: white;
+            border-radius: 20px;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            border: 1px solid #e2e8f0;
+        }
+
+        .extra-selector label {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        select {
+            padding: 8px 16px;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.9rem;
+        }
+
+        /* KPIs principales */
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+
+        .kpi-card {
+            background: white;
+            border-radius: 24px;
+            padding: 18px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #eef2ff;
+        }
+
+        .kpi-card h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #475569;
+        }
+
+        .kpi-value {
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: #0f3b5f;
+            margin: 10px 0;
+        }
+
+        /* filtros */
+        .filtros {
+            background: white;
+            border-radius: 24px;
+            padding: 16px 24px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* gráficos dobles */
+        .graficos-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 28px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
+        canvas {
+            max-height: 260px;
+            width: 100%;
+        }
+
+        /* tabla */
+        .tabla-wrapper {
+            background: white;
+            border-radius: 28px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        th, td {
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 1px solid #e9edf2;
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+        }
+
+        .badge-estado {
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .verde { background: #dff9e6; color: #116b3e; }
+        .amarillo { background: #fff3cf; color: #a46400; }
+        .rojo { background: #ffe6e5; color: #b91c1c; }
+
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 0.7rem;
+            color: #5b6e8c;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <div>
+            <h1><i class="fas fa-chart-line" style="color:#2c7da0;"></i> Ejecución Presupuestal</h1>
+            <p>PIM · Devengado · Saldo · % Ejecución</p>
+        </div>
+        <div class="status-badge">
+            <i class="fas fa-database"></i> Datos desde GitHub
+        </div>
+    </div>
+
+    <!-- selector de indicadores extra: Compromiso Anual / Certificado (opcional) -->
+    <div class="extra-selector">
+        <i class="fas fa-sliders-h"></i>
+        <label>📌 Indicador adicional:</label>
+        <select id="selector-extra">
+            <option value="ninguno">📁 Ninguno (solo PIM / Devengado)</option>
+            <option value="compromiso">📝 Compromiso Anual</option>
+            <option value="certificado">✅ Certificado</option>
+        </select>
+        <span style="font-size:0.7rem; color:#3b6e8f;">◉ Muestra solo lo que necesitas, sin saturar</span>
+    </div>
+
+    <!-- KPIs principales (siempre visibles) -->
+    <div class="kpis">
+        <div class="kpi-card"><h3>📊 PIM Total</h3><div class="kpi-value" id="total-pim">S/ 0</div></div>
+        <div class="kpi-card"><h3>💰 Devengado</h3><div class="kpi-value" id="total-devengado">S/ 0</div></div>
+        <div class="kpi-card"><h3>💵 Saldo</h3><div class="kpi-value" id="total-saldo">S/ 0</div></div>
+        <div class="kpi-card"><h3>🎯 Ejecución</h3><div class="kpi-value" id="total-porc">0%</div></div>
+    </div>
+
+    <!-- kpi extra dinámico (se muestra según selección) -->
+    <div class="kpis" id="extra-kpi-container" style="display: none;">
+        <div class="kpi-card" id="extra-card">
+            <h3 id="extra-titulo">Extra</h3>
+            <div class="kpi-value" id="extra-valor">S/ 0</div>
+        </div>
+    </div>
+
+    <!-- filtros -->
+    <div class="filtros">
+        <i class="fas fa-building"></i>
+        <label>Unidad Ejecutora:</label>
+        <select id="unidad-select">
+            <option value="__TODAS__">🌐 TODAS</option>
+        </select>
+        <div style="margin-left: auto; font-size:0.7rem;"><span id="registros-count">0</span> registros</div>
+    </div>
+
+    <!-- gráficos -->
+    <div class="graficos-row">
+        <div class="card">
+            <h3><i class="fas fa-chart-bar"></i> Comparativo unidades (PIM vs Devengado)</h3>
+            <canvas id="barChart" height="250"></canvas>
+        </div>
+        <div class="card">
+            <h3><i class="fas fa-chart-pie"></i> Avance de ejecución</h3>
+            <canvas id="doughnutChart" height="220"></canvas>
+            <div id="avance-texto" style="text-align:center; margin-top:12px;"></div>
+        </div>
+    </div>
+
+    <!-- tabla detalle -->
+    <div class="tabla-wrapper">
+        <h3><i class="fas fa-table-list"></i> Detalle por unidad ejecutora</h3>
+        <table>
+            <thead>
+                <tr><th>Unidad</th><th>PIM (S/)</th><th>Devengado (S/)</th><th id="th-extra" style="display:none;">Extra</th><th>Saldo (S/)</th><th>% Ejecución</th><th>Estado</th></tr>
+            </thead>
+            <tbody id="tabla-body">
+                <tr><td colspan="6">Cargando datos desde GitHub...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="footer">
+        <i class="fas fa-cloud-upload-alt"></i> Los datos se cargan automáticamente desde tu archivo CSV en GitHub<br>
+        <small>Columnas esperadas: unidad_ejecutora, pim, devengado, compromiso_anual, certificado</small>
+    </div>
+</div>
+
+<script>
+    // ----------------------------------------------
+    // 🟢 CAMBIA ESTA URL POR LA DE TU CSV EN GITHUB
+    // ----------------------------------------------
+    const CSV_URL = "https://raw.githubusercontent.com/TU_USUARIO/TU_REPOSITORIO/main/tu_archivo.csv";
+    // ⬆️ EJEMPLO: "https://raw.githubusercontent.com/juanperez/mi-dashboard/main/datos.csv"
+
+    let datosGlobales = [];       // datos procesados
+    let unidadActual = "__TODAS__";
+    let extraSeleccionado = "ninguno";   // "compromiso", "certificado" o "ninguno"
+
+    // charts
+    let barChart, doughnutChart;
+
+    // helpers
+    function formatMoney(valor) {
+        return "S/ " + valor.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // procesar data cruda del CSV
+    function procesarDataFromCSV(rows) {
+        return rows.map(row => {
+            let pim = parseFloat(row.pim) || 0;
+            let dev = parseFloat(row.devengado) || 0;
+            let compromiso = parseFloat(row.compromiso_anual) || 0;
+            let certificado = parseFloat(row.certificado) || 0;
+            let saldo = pim - dev;
+            let ejecucion = pim > 0 ? (dev / pim) * 100 : 0;
+            let estado = "";
+            if (ejecucion >= 80) estado = "Óptimo";
+            else if (ejecucion >= 50) estado = "Regular";
+            else estado = "Crítico";
+            let colorEstado = ejecucion >= 80 ? "verde" : (ejecucion >= 50 ? "amarillo" : "rojo");
+            return {
+                ...row,
+                pim, devengado: dev, compromiso_anual: compromiso, certificado,
+                saldo, ejecucion, estado, colorEstado
+            };
+        });
+    }
+
+    // filtrar según unidad seleccionada
+    function getDataFiltrada() {
+        if (unidadActual === "__TODAS__") return datosGlobales;
+        return datosGlobales.filter(d => d.unidad_ejecutora === unidadActual);
+    }
+
+    // obtener valor del extra según selección (compromiso o certificado)
+    function getExtraValue(item) {
+        if (extraSeleccionado === "compromiso") return item.compromiso_anual;
+        if (extraSeleccionado === "certificado") return item.certificado;
+        return 0;
+    }
+
+    // actualizar KPI extra y tabla
+    function actualizarExtra() {
+        const extraContainer = document.getElementById("extra-kpi-container");
+        const extraTitulo = document.getElementById("extra-titulo");
+        const extraValor = document.getElementById("extra-valor");
+        const thExtra = document.getElementById("th-extra");
+        const tablaBody = document.getElementById("tabla-body");
+
+        if (extraSeleccionado === "ninguno") {
+            extraContainer.style.display = "none";
+            thExtra.style.display = "none";
+        } else {
+            extraContainer.style.display = "grid";
+            let tituloMostrar = extraSeleccionado === "compromiso" ? "📝 Compromiso Anual" : "✅ Certificado";
+            extraTitulo.innerText = tituloMostrar;
+
+            // sumatoria del extra en los datos filtrados
+            const filtrados = getDataFiltrada();
+            let sumaExtra = filtrados.reduce((acc, d) => acc + getExtraValue(d), 0);
+            extraValor.innerText = formatMoney(sumaExtra);
+            thExtra.style.display = "table-cell";
+            thExtra.innerText = tituloMostrar;
+        }
+
+        // reconstruir tabla con columna extra si aplica
+        const dataMostrar = getDataFiltrada();
+        let html = "";
+        for (let d of dataMostrar) {
+            let extraCell = "";
+            if (extraSeleccionado !== "ninguno") {
+                let valorExtra = getExtraValue(d);
+                extraCell = `<td>${formatMoney(valorExtra)}</td>`;
+            }
+            html += `<tr>
+                        <td><strong>${escapeHtml(d.unidad_ejecutora)}</strong></td>
+                        <td>${formatMoney(d.pim)}</td>
+                        <td>${formatMoney(d.devengado)}</td>
+                        ${extraCell}
+                        <td>${formatMoney(d.saldo)}</td>
+                        <td>${d.ejecucion.toFixed(2)}%</td>
+                        <td><span class="badge-estado ${d.colorEstado}">${d.estado}</span></td>
+                     </tr>`;
+        }
+        if (dataMostrar.length === 0) html = '<tr><td colspan="7">No hay datos para esta unidad</td></tr>';
+        document.getElementById("tabla-body").innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return "";
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // actualizar KPIs principales
+    function actualizarKPIs() {
+        const filtrados = getDataFiltrada();
+        let sumaPim = 0, sumaDev = 0;
+        filtrados.forEach(d => { sumaPim += d.pim; sumaDev += d.devengado; });
+        let sumaSaldo = sumaPim - sumaDev;
+        let ejecucionGlobal = sumaPim > 0 ? (sumaDev / sumaPim) * 100 : 0;
+
+        document.getElementById("total-pim").innerText = formatMoney(sumaPim);
+        document.getElementById("total-devengado").innerText = formatMoney(sumaDev);
+        document.getElementById("total-saldo").innerText = formatMoney(sumaSaldo);
+        document.getElementById("total-porc").innerText = ejecucionGlobal.toFixed(2) + "%";
+        document.getElementById("registros-count").innerText = datosGlobales.length;
+    }
+
+    // gráfico de barras (top 6)
+    function actualizarBarChart() {
+        let top = [...datosGlobales].sort((a,b) => b.pim - a.pim).slice(0,6);
+        let labels = top.map(d => d.unidad_ejecutora.length > 25 ? d.unidad_ejecutora.slice(0,22)+"…" : d.unidad_ejecutora);
+        let pims = top.map(d => d.pim);
+        let devs = top.map(d => d.devengado);
+
+        if (barChart) barChart.destroy();
+        const ctx = document.getElementById('barChart').getContext('2d');
+        barChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'PIM', data: pims, backgroundColor: '#2c7da0', borderRadius: 8 },
+                    { label: 'Devengado', data: devs, backgroundColor: '#52b788', borderRadius: 8 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatMoney(ctx.raw)}` } }
+                }
+            }
+        });
+    }
+
+    // gráfico doughnut (avance)
+    function actualizarDoughnut() {
+        const filtrados = getDataFiltrada();
+        let sumaPim = 0, sumaDev = 0;
+        filtrados.forEach(d => { sumaPim += d.pim; sumaDev += d.devengado; });
+        let porc = sumaPim > 0 ? (sumaDev / sumaPim) * 100 : 0;
+        let resto = 100 - porc;
+        if (doughnutChart) doughnutChart.destroy();
+        const ctx = document.getElementById('doughnutChart').getContext('2d');
+        doughnutChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Ejecutado', 'Saldo'],
+                datasets: [{ data: [porc, resto], backgroundColor: ['#2c7da0', '#e2e8f0'], cutout: '65%' }]
+            },
+            options: { plugins: { legend: { position: 'bottom' } } }
+        });
+        document.getElementById("avance-texto").innerHTML = `<strong>${porc.toFixed(2)}%</strong> de ejecución (unidad actual)`;
+    }
+
+    // llenar selector de unidades
+    function llenarSelectorUnidades() {
+        let unidades = [...new Set(datosGlobales.map(d => d.unidad_ejecutora))].sort();
+        let options = '<option value="__TODAS__">🌐 TODAS LAS UNIDADES</option>';
+        unidades.forEach(u => { options += `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`; });
+        document.getElementById("unidad-select").innerHTML = options;
+        document.getElementById("unidad-select").value = unidadActual;
+    }
+
+    // refresh completo
+    function refreshTodo() {
+        if (!datosGlobales.length) return;
+        llenarSelectorUnidades();
+        actualizarKPIs();
+        actualizarExtra();
+        actualizarBarChart();
+        actualizarDoughnut();
+    }
+
+    // cargar CSV desde GitHub
+    async function cargarDataDesdeGitHub() {
+        try {
+            document.getElementById("tabla-body").innerHTML = '<tr><td colspan="6">⏳ Descargando datos desde GitHub...</td></tr>';
+            const response = await fetch(CSV_URL);
+            if (!response.ok) throw new Error(`HTTP ${response.status}: No se pudo cargar el CSV. Revisa la URL`);
+            const texto = await response.text();
+            const lineas = texto.split(/\r?\n/);
+            if (lineas.length < 2) throw new Error("CSV vacío");
+            const headers = lineas[0].split(',').map(h => h.trim().toLowerCase());
+            const idxUnidad = headers.findIndex(h => h.includes('unidad_ejecutora') || h === 'unidad');
+            const idxPim = headers.findIndex(h => h === 'pim');
+            const idxDev = headers.findIndex(h => h === 'devengado');
+            const idxComp = headers.findIndex(h => h === 'compromiso_anual');
+            const idxCert = headers.findIndex(h => h === 'certificado');
+            if (idxUnidad === -1 || idxPim === -1 || idxDev === -1) {
+                alert("Error: El CSV debe tener columnas: unidad_ejecutora, pim, devengado (y opcional: compromiso_anual, certificado)");
+                return;
+            }
+            let registros = [];
+            for (let i = 1; i < lineas.length; i++) {
+                if (!lineas[i].trim()) continue;
+                const cols = lineas[i].split(',');
+                if (cols.length < 3) continue;
+                let unidad = cols[idxUnidad] ? cols[idxUnidad].trim() : "Sin nombre";
+                let pim = parseFloat(cols[idxPim]) || 0;
+                let dev = parseFloat(cols[idxDev]) || 0;
+                let comp = idxComp !== -1 ? (parseFloat(cols[idxComp]) || 0) : 0;
+                let cert = idxCert !== -1 ? (parseFloat(cols[idxCert]) || 0) : 0;
+                registros.push({ unidad_ejecutora: unidad, pim, devengado: dev, compromiso_anual: comp, certificado: cert });
+            }
+            if (registros.length === 0) throw new Error("No se encontraron datos válidos");
+            datosGlobales = procesarDataFromCSV(registros);
+            unidadActual = "__TODAS__";
+            refreshTodo();
+        } catch (error) {
+            console.error(error);
+            document.getElementById("tabla-body").innerHTML = `<tr><td colspan="6">❌ Error cargando CSV: ${error.message}<br>Verifica que la URL sea RAW de GitHub y el formato correcto</td></tr>`;
+        }
+    }
+
+    // Eventos UI
+    document.getElementById("unidad-select").addEventListener("change", (e) => {
+        unidadActual = e.target.value;
+        actualizarKPIs();
+        actualizarExtra();
+        actualizarDoughnut();
+    });
+
+    document.getElementById("selector-extra").addEventListener("change", (e) => {
+        extraSeleccionado = e.target.value;
+        actualizarExtra();   // muestra/oculta columna y kpi extra
+        // no afecta gráficos principales
+    });
+
+    // inicio: cargar desde GitHub
+    cargarDataDesdeGitHub();
+</script>
+</body>
+</html>
