@@ -271,7 +271,7 @@
     // ----------------------------------------------
     // 🟢 CAMBIA ESTA URL POR LA DE TU CSV EN GITHUB
     // ----------------------------------------------
-    const CSV_URL = "https://raw.githubusercontent.com/TU_USUARIO/TU_REPOSITORIO/main/tu_archivo.csv";
+    const CSV_URL = "https://raw.githubusercontent.com/grppatpuno-afk/mi-dashboard-presupuesto/refs/heads/main/data_30_04_2026_inia.csv";
     // ⬆️ EJEMPLO: "https://raw.githubusercontent.com/juanperez/mi-dashboard/main/datos.csv"
 
     let datosGlobales = [];       // datos procesados
